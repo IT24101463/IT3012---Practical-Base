@@ -10,6 +10,7 @@ class VisualGridHuntGame:
         self.width = width
         self.height = height
         self.agent_pos = [0, 0]  # Starting position (x, y)
+        self.facing = 'Right'  # Initial facing direction
 
         if custom_walls is not None:
             self.walls = set(custom_walls)
@@ -55,21 +56,49 @@ class VisualGridHuntGame:
         self.steps = 0
         self.collision = False
 
-    def get_percept(self) -> dict:
-        return {
-            'agent_pos': list(self.agent_pos),
-            'opponent_positions': [list(op) for op in self.opponents],
-            'smells_food': tuple(self.agent_pos) in self.food_positions,
-            'smells_toxic': tuple(self.agent_pos) in self.toxic_traps,
-            'hit_wall': tuple(self.agent_pos) in self.walls,
-            'collision': self.collision,
-            'score': self.score,
-            'remaining_food': len(self.food_positions)
+    def get_percept(self, agent=None) -> dict:
+        #save agent current position
+        x,y = self.agent_pos
+        
+        #change cordinates according to the agent's moves 
+        directions = {
+            'Up':(0,1),
+            'Down':(0,-1),
+            'Left':(-1,0),
+            'Right':(1,0)
         }
+        
+        #get the direction the agent is currently facing
+        dx,dy = directions[self.facing]
+        
+        #calculate grid position
+        ahead = (x + dx, y + dy)
+        
+        wall_ahead = (
+            ahead[0] < 0 or
+            ahead[0] >= self.width or
+            ahead[1] < 0 or
+            ahead[1] >= self.height or
+            ahead in self.walls
+        )
+        
+        #check whether the food os at current position or not
+        food_here = (x,y) in self.food_positions
 
+        return {
+            'wall_ahead': wall_ahead,
+            'food_here': food_here,
+            'agent_pos': list(self.agent_pos),
+            'facing': self.facing,
+        }
+        
+        
     def execute_action(self, action: str):
         self.steps += 1
         new_pos = list(self.agent_pos)
+        
+        if action in ['Up', 'Down', 'Left', 'Right']:
+            self.facing = action  
 
         if action == 'Up':
             new_pos[1] = min(self.height - 1, new_pos[1] + 1)
